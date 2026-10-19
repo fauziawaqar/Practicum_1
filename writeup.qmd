@@ -1,0 +1,95 @@
+---
+title: "Practicum 1: Replicating Bartels (2000)"
+author: "Fauzia Waqar"
+date: "October 2026"
+format: pdf
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+##Introduction
+This write-up copies Figures 1 and 2 from Bartels (2000). I used the CCES survey for the years 2006 to 2024.
+```{r}
+library(tidyverse)
+library(haven)
+
+cc <- read_rds("data/cumulative_2006-2024.rds")
+```
+## Figure 1
+
+Figure 1 shows how many people are in each of four groups: strong, weak, leaners and pure independents.
+Strong is the biggest group, at about 0.4. Weak is about 0.2 to 0.3. Leaners are about 0.2, and pure independents are about 0.1 to 0.2.
+The lines stay about the same from 2006 to 2024. This means people’s party loyalty did not change much.
+
+```{r}
+#| fig-cap: "The Distribution of Party Identification, 2006-2024"
+#| fig-width: 8
+#| fig-height: 4.5
+#| out-width: "100%"
+# Table for Figure 1
+fig_1 <- cc |>
+  select(year, pid7, weight) |>
+  filter(year %in% 2006:2024) |>
+  mutate(pid7 = as_factor(pid7)) |>
+  mutate(pid7 = case_when(
+    pid7 %in% c("Strong Democrat", "Strong Republican") ~ "Strong",
+    pid7 %in% c("Not Very Strong Democrat", "Not Very Strong Republican") ~ "Weak",
+    pid7 %in% c("Lean Democrat", "Lean Republican") ~ "Leaner",
+    pid7 == "Independent" ~ "Pure independent"
+  )) |>
+  filter(!is.na(pid7)) |>
+  group_by(year, pid7) |>
+  summarize(total = sum(weight, na.rm = TRUE), .groups = "drop") |>
+  group_by(year) |>
+  mutate(proportion = total / sum(total)) |>
+  ungroup()
+
+# Figure 1
+ggplot(fig_1, aes(x = year, y = proportion, linetype = pid7)) +
+  geom_line() +
+  scale_linetype_manual(values = c("Strong" = "solid", "Weak" = "dashed",
+                                   "Pure independent" = "dotted", "Leaner" = "dotdash")) +
+  labs(title = "The Distribution of Party Identification, 2006-2024")
+```
+
+## Figure 2
+
+Figure 2 shows how many voters and nonvoters are strong or weak party identifiers. It uses presidential election years only: 2008, 2012, 2016, 2020 and 2024.
+Voters are always higher than nonvoters. Voters are at about 0.6 to 0.7, and nonvoters are at about 0.5.
+This means people who vote are more loyal to a party than people who do not vote.
+
+```{r}
+fig_2<-cc|>
+  select(year,pid7,weight,voted_turnout_self) |>
+  filter(year %in% c(2008,2012,2016,2020,2024)) |>
+  mutate(pid7 = as_factor(pid7),
+         voted_turnout_self = as_factor(voted_turnout_self)) |>
+     mutate(identifier = case_when(
+      pid7 %in% c("Strong Democrat", "Not Very Strong Democrat",
+                  "Not Very Strong Republican", "Strong Republican") ~ 1,
+      pid7 %in% c("Lean Democrat", "Independent", "Lean Republican") ~ 0
+    )) |>
+  mutate(group = case_when(
+    voted_turnout_self == "Yes" ~ "Voters",
+    voted_turnout_self == "No" ~ "Nonvoters",
+    is.na(voted_turnout_self) ~ NA
+  )) |>
+  filter(!is.na(identifier), !is.na(group)) |>
+  group_by(year,group)|>
+  summarize(proportion = sum(identifier * weight) / sum(weight))
+ggplot(fig_2, aes(x = year, y = proportion, linetype = group)) +
+  geom_line() +
+  geom_point() +
+  scale_linetype_manual(values = c("Voters" = "solid", "Nonvoters" = "dashed")) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(title = "Party Identification Among Presidential Voters and Nonvoters, 2008-2024")
+  
+```
+## Challenges
+
+The party answers in the data were numbers, so my code did not work until I changed them into words with as_factor(). Some people answered “Not Sure” or gave no answer, so I removed them. The survey was a different size each year, so I used proportions and the survey weights to compare the years fairly.
+
+## Differences from Bartels
+
+Bartels used the ANES survey for 1952 to 1996. I used the online CCES survey for 2006 to 2024. In Bartels’ Figure 1, weak identifiers (people who pick a party, but not strongly) are about the same as or higher than strong ones. In mine, strong identifiers are higher, at about 0.4, and weak ones are lower, at about 0.2 to 0.3. In both Figure 2s, voters are more loyal to a party than nonvoters, but my numbers are a little lower. The difference may come from the different survey and years.
