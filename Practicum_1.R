@@ -1,3 +1,8 @@
+# Title: Practicum_1.R
+# Author: Fauzia Waqar
+# Purpose: Replicate Figures 1 and 2 from Bartels (2000), "Partisanship and Voting Behavior," using the Cumulative CCES data, 2006-2024
+# Requires: data/cumulative_2006-2024.rds in the working directory; packages tidyverse and haven installed
+# Output: Plots to plot window; nothing to disk
 library(tidyverse)
 library(haven)
 cc <- read_rds("data/cumulative_2006-2024.rds")
